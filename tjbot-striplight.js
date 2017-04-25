@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-var TJBot = require('tjbot');
+const TJBot = require('tjbot');
+const winston = require('winston');
 
 /** ------------------------------------------------------------------------ */
-/** CONFIGURATION                                                            */
+/** INTERNALS                                                                */
 /** ------------------------------------------------------------------------ */
 
 // overlay new hardware for the striplight
@@ -38,17 +39,20 @@ TJBot.prototype.defaultConfiguration.shine = {
  */
 TJBot.prototype._setupLEDStrip = function() {
     // make sure the tjbot doesn't have an led already configured
-    if (this.hardware.includes('led')) {
+    if (this._led != undefined) {
         throw new Error("TJBot doesn't support both an led and led-strip, please include only one in the hardware configuration.");
     }
     
     var ws281x = require('rpi-ws281x-native');
-    tj._ledstrip = ws281x;
-    tj._ledstrip.init(this.configuration.shine.led_strip.num_leds);
+    this._led = ws281x;
+    this._led.init(this.configuration.shine.led_strip.num_leds);
+
+    // keep track that we're using an led-strip
+    this._ledstrip = true;
     
     // clean up the led strip before the process exits
     process.on('SIGINT', function() {
-        tj._ledstrip.reset();
+        this._led.reset();
         process.nextTick(function() {
             process.exit(0);
         })
@@ -61,7 +65,7 @@ TJBot.prototype._setupLEDStrip = function() {
 TJBot.prototype._assertLEDStrip = function() {
     if (!this._ledstrip) {
         throw new Error(
-            'TJBot is not configured to led-strip. ' +
+            'TJBot is not configured with an led-strip. ' +
             'Please check that you included the "led-strip" hardware in the TJBot constructor.');
     }
 }
@@ -90,7 +94,8 @@ TJBot.prototype._hslToRgb = function(h, s, l) {
         
         var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
         var p = 2 * l - q;
-        r = hue2rgb(p, q, h + 1/3);
+        r = hue2rgb
+(p, q, h + 1/3);
         g = hue2rgb(p, q, h);
         b = hue2rgb(p, q, h - 1/3);
     }
@@ -106,17 +111,19 @@ TJBot.prototype._hslToRgb = function(h, s, l) {
 TJBot.prototype.shineStrip = function(rgbColors) {
     this._assertLEDStrip();
     
-    if (!colors.constructor === Array) {
+    if (!rgbColors.constructor === Uint32Array) {
         throw new Error("shineStrip() expects a Uint32Array of colors");
     }
     
-    if (!colors.length != this.configuration.shine.led_strip.num_leds) {
-        throw new Error("shineStrip() expects an array with " + this.configuration.shine.led_strip.num_leds + " elements");
+    if (rgbColors.length != this.configuration.shine.led_strip.num_leds) {
+        throw new Error(
+            "shineStrip() expects an array with " + this.configuration.shine.led_strip.num_leds + 
+            " colors, received an array with " + rgbColors.length + " colors.");
     }
     
     // render
     winston.verbose("TJBot shining LED strip to " + rgbColors.join(','));
-    this._ledstrip.render(rgbColors);
+    this._led.render(rgbColors);
 }
 
 /**
@@ -194,3 +201,4 @@ TJBot.prototype.shineStripWithHSLColor = function(h, s, l) {
 }
 
 module.exports = TJBot;
+
