@@ -6,7 +6,7 @@ This is an extension of the [TJBot library](http://github.com/ibmtjbot/tjbotlib)
 
 # Usage
 
-This is a drop-in replacement for the `tjbot` library. 
+This is a drop-in replacement for the `tjbot` library.
 
 First, clone this repository.
 
@@ -18,9 +18,9 @@ git clone https://github.com/jweisz/tjbot-striplight
 Next, include this library in your recipe and instantiate the `TJBot` object with the `led-strip` hardware.
 
 ```
-const TJBot = require(‘/home/pi/Desktop/tjbot-striplight’);
+const TJBot = require('/home/pi/Desktop/tjbot-striplight');
 
-var hardware = [‘led-strip’];
+var hardware = ['led-strip'];
 var configuration = {
     shine: {
         led_strip: {
