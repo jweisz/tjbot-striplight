@@ -129,7 +129,10 @@ TJBot.prototype.shineStrip = function(rgbColors) {
     }
     
     // render
-    winston.verbose("TJBot shining LED strip to " + rgbColors.join(','));
+    var hexColors = rgbColors.map(function(c) {
+        return c.toString(16);
+    });
+    winston.verbose("TJBot shining LED strip to " + hexColors.join(','));
     this._led.render(rgbColors);
 }
 
