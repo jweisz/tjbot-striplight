@@ -42,17 +42,24 @@ TJBot.prototype._setupLEDStrip = function() {
     if (this._led != undefined) {
         throw new Error("TJBot doesn't support both an led and led-strip, please include only one in the hardware configuration.");
     }
-    
+
+    // set this winston instance's log level
+    winston.level = this.configuration.log.level;
+
+    winston.verbose("initializing LED strip with " + this.configuration.shine.led_strip.num_leds + " LEDs");
     var ws281x = require('rpi-ws281x-native');
     this._led = ws281x;
     this._led.init(this.configuration.shine.led_strip.num_leds);
 
     // keep track that we're using an led-strip
     this._ledstrip = true;
-    
+
+    // capture 'this' context
+    var self = this;
+
     // clean up the led strip before the process exits
     process.on('SIGINT', function() {
-        this._led.reset();
+        self._led.reset();
         process.nextTick(function() {
             process.exit(0);
         })
