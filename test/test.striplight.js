@@ -28,7 +28,7 @@ var tjConfig = {
     },
     shine: {
         led_strip: {
-            num_leds: 60
+            num_leds: 180
         }
     }
 };
@@ -38,17 +38,19 @@ var tj = new TJBot(hardware, tjConfig, {});
 tj._setupLEDStrip();
 console.log("TJBot configured with " + tj.configuration.shine.led_strip.num_leds + " LEDs");
 
-for (var i = 0; i < 60; i++) {
+var numLEDs = tj.configuration.shine.led_strip.num_leds;
+
+for (var i = 0; i < numLEDs; i++) {
     tj.shineLED(i, "red");
     tj.sleep(50);
 }
 
-for (var i = 59; i >= 0; i--) {
+for (var i = numLEDs - 1; i >= 0; i--) {
     tj.shineLED(i, "green");
     tj.sleep(50);
 }
 
-for (var i = 0; i < 60; i++) {
+for (var i = 0; i < numLEDs; i++) {
     tj.shineLED(i, "blue");
     tj.sleep(50);
 }
