@@ -28,7 +28,7 @@ var tjConfig = {
     },
     shine: {
         led_strip: {
-            num_leds: 1
+            num_leds: 60
         }
     }
 };
@@ -37,24 +37,23 @@ var tjConfig = {
 var tj = new TJBot(hardware, tjConfig, {});
 tj._setupLEDStrip();
 console.log("TJBot configured with " + tj.configuration.shine.led_strip.num_leds + " LEDs");
-/*
-for (var i = 0; i < 10; i++) {
-    tj.shineStripWithRGBColor('random');
-    tj.sleep(500);
+
+for (var i = 0; i < 60; i++) {
+    tj.shineLED(i, "red");
+    tj.sleep(50);
 }
 
-for (var i = 0; i < tj.configuration.shine.led_strip.num_leds; i++) {
-    tj.rainbowStrip(i);
-    tj.sleep(500);
+for (var i = 59; i >= 0; i--) {
+    tj.shineLED(i, "green");
+    tj.sleep(50);
 }
-*/
 
-tj.shineStripWithRGBColor('on');
+for (var i = 0; i < 60; i++) {
+    tj.shineLED(i, "blue");
+    tj.sleep(50);
+}
 
-var color = "0xFF0000";
-var colorInt = parseInt(color);
+tj.rainbowStrip();
+tj.sleep(3000);
 
-var arr = new Uint32Array(1);
-arr[0] = colorInt;
-
-tj._led.render(arr);
+tj.shineStripWithRGBColor("off");

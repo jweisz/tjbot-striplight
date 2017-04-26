@@ -101,13 +101,39 @@ TJBot.prototype._hslToRgb = function(h, s, l) {
         
         var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
         var p = 2 * l - q;
-        r = hue2rgb
-(p, q, h + 1/3);
+        r = hue2rgb(p, q, h + 1/3);
         g = hue2rgb(p, q, h);
         b = hue2rgb(p, q, h - 1/3);
     }
     
     return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
+/**
+ * Compute the rainbow colors.
+ *
+ * @param {Integer} offset The offset of the pattern; an offset of 0 begins at red and ends at blue, an offset will shift where the rainbow begins.
+ */
+TJBot.prototype._rainbowColors = function(offset = 0) {
+    var numLED = this.configuration.shine.led_strip.num_leds;
+    var hueStep = 1 / numLED;
+    var colors = new Uint32Array(numLED);
+    
+    for (var i = 0; i < numLED; i++) {
+        var h = i * hueStep;
+        var s = 0.5;
+        var l = 0.5;
+        var rgb = this._hslToRgb(h, s, l);
+        var rgbInt = rgb[0] << 0x10 | rgb[1] << 0x08 | rgb[2];
+        colors[i] = rgbInt;
+    }
+    
+    // rotate by offset
+    for (var i = 0; i < offset; i++) {
+        colors.unshift(colors.pop());
+    }
+    
+    return colors;
 }
 
 /**
@@ -128,11 +154,14 @@ TJBot.prototype.shineStrip = function(rgbColors) {
             " colors, received an array with " + rgbColors.length + " colors.");
     }
     
+    // map doesn't seem to be working for this, sigh
+    var hexColors = [];
+    for (var i = 0; i < rgbColors.length; i++) {
+        hexColors[i] = rgbColors[i].toString(16);
+    }
+
     // render
-    var hexColors = rgbColors.map(function(c) {
-        return c.toString(16);
-    });
-    winston.verbose("TJBot shining LED strip to " + hexColors.join(','));
+    winston.debug("TJBot shining LED strip to RGB ", hexColors);
     this._led.render(rgbColors);
 }
 
@@ -141,27 +170,9 @@ TJBot.prototype.shineStrip = function(rgbColors) {
  *
  * @param {Integer} offset The offset of the pattern; an offset of 0 begins at red and ends at blue, an offset will shift where the rainbow begins.
  */
-TJBot.prototype.rainbowStrip = function(offset) {
+TJBot.prototype.rainbowStrip = function(offset = 0) {
     this._assertLEDStrip();
-    
-    var numLED = this.configuration.shine.led_strip.num_leds;
-    var hueStep = 1 / numLED;
-    var colors = new Uint32Array(numLED);
-    
-    for (var i = 0; i < numLED; i++) {
-        var h = i * hueStep;
-        var s = 0.5;
-        var l = 0.5;
-        var rgb = this._hslToRgb(h, s, l);
-        var grb_int = rgb[1] << 0x10 | rgb[0] << 0x08 | rgb[2];
-        colors[i] = grb_int;
-    }
-    
-    // rotate by offset
-    for (var i = 0; i < offset; i++) {
-        colors.unshift(colors.pop());
-    }
-    
+    var colors = this._rainbowColors();
     this.shineStrip(colors);
 }
 
@@ -175,14 +186,12 @@ TJBot.prototype.shineStripWithRGBColor = function(color) {
 
     // convert to rgb
     var rgb = this._normalizeColor(color);
-
-    // convert hex to the 0xGGRRBB format for the LED
-    var grb = "0x" + rgb[3] + rgb[4] + rgb[1] + rgb[2] + rgb[5] + rgb[6];
+    var rgbInt = parseInt("0x" + rgb[1] + rgb[2] + rgb[3] + rgb[4] + rgb[5] + rgb[6]);
 
     // determine the LED colors
     var colors = new Uint32Array(this.configuration.shine.led_strip.num_leds);
     for (var i = 0; i < this.configuration.shine.led_strip.num_leds; i++) {
-        colors[i] = parseInt(grb);
+        colors[i] = parseInt(rgbInt);
     }
     
     // shine
@@ -201,14 +210,44 @@ TJBot.prototype.shineStripWithHSLColor = function(h, s, l) {
 
     // convert to rgb
     var rgb = this._hslToRgb(h, s, l);
-    var grb_int = rgb[1] << 0x10 | rgb[0] << 0x08 | rgb[2];
+    var rgbInt = rgb[0] << 0x10 | rgb[1] << 0x08 | rgb[2];
     
     // determine the LED colors
     var colors = new Uint32Array(this.configuration.shine.led_strip.num_leds);
-    colors.fill(grb_int);
+    colors.fill(rgbInt);
     
     this.shineStrip(colors);
 }
 
-module.exports = TJBot;
+/**
+ * Shine a single LED in the strip.
+ * 
+ * @param {Integer} index The index of the LED to shine. Must be less than the number of LEDs with which the strip was configured.
+ * @param {String} color The color to use. Must be interpretable by TJBot.prototype._normalizeColor.
+ */
+TJBot.prototype.shineLED = function(index, color) {
+    this._assertLEDStrip();
+    
+    // make sure the index is less than the number of LEDs in the strip
+    if (index >= this.configuration.shine.led_strip.num_leds) {
+        throw new Error("Cannot shine LED at index " + index + " when strip only contains " + this.configuration.shine.led_strip.num_leds + " LEDs");
+    }
+    
+    // convert to rgb
+    var rgb = this._normalizeColor(color);
+    var rgbInt = parseInt("0x" + rgb[1] + rgb[2] + rgb[3] + rgb[4] + rgb[5] + rgb[6]);
 
+    // determine the LED colors
+    var colors = new Uint32Array(this.configuration.shine.led_strip.num_leds);
+    for (var i = 0; i < this.configuration.shine.led_strip.num_leds; i++) {
+        colors[i] = 0;
+        if (i == index) {
+            colors[i] = rgbInt;
+        }
+    }
+    
+    // shine
+    this.shineStrip(colors);
+}
+
+module.exports = TJBot;
